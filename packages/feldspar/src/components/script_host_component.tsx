@@ -20,7 +20,7 @@ export interface ScriptHostProps {
 
 const FeldsparContent: React.FC<ScriptHostProps> = ({
   workerUrl,
-  locale = "en",
+  locale = "nl",
   standalone = false,
   className,
   factories = [],
