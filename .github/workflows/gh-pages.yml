@@ -52,8 +52,6 @@ jobs:
           cp packages/python/dist/*.whl packages/data-collector/public/
 
       - name: Build App
-        env:
-          NODE_ENV: development
         run: npm run build
 
       - name: Deploy to GitHub Pages
