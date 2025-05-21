@@ -11,6 +11,9 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      REACT_APP_BUILD: standalone
+      NODE_ENV: development
 
     steps:
       - name: Checkout
