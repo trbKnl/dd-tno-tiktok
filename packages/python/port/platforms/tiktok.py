@@ -7,7 +7,7 @@ Assumptions:
 It handles DDPs in the english language with filetype txt.
 """
 
-from typing import Dict, Any
+from typing import Any, Tuple
 import logging
 import io
 import re
@@ -148,12 +148,140 @@ def browsing_history_to_df(file: str, validation) -> pd.DataFrame:
 
     return out
 
+###########################################
+# shares
 
-def extraction(tiktok_zip: str, validation) -> list[d3i_props.PropsUIPromptConsentFormTableViz]:
+
+def share_history_to_df_txt(tiktok_zip: str):
+
+    out = pd.DataFrame()
+
+    try:
+        b = eh.extract_file_from_zip(tiktok_zip, "Share History.txt")
+        b = io.TextIOWrapper(b, encoding='utf-8')
+        text = b.read()
+
+        pattern = re.compile(r"^Date: (.*?)\nShared Content: (.*?)\nLink: (.*?)\nMethod: (.*?)$", re.MULTILINE)
+        matches = re.findall(pattern, text)
+        out = pd.DataFrame(matches, columns=["Time and date", "Shared content", "Link", "Method"]) # pyright: ignore
+
+    except Exception as e:
+        logger.error(e)
+
+    return out
+
+
+def share_history_to_df_json(tiktok_zip: str) -> pd.DataFrame:
+
+    d = read_tiktok_file(tiktok_zip)
+    datapoints = []
+    out = pd.DataFrame()
+
+    try:  # pyright: ignore
+        history = d["Your Activity"]["Share History"]["ShareHistoryList"] #pyright: ignore
+        for item in history:
+            datapoints.append((
+                item.get("Date", None), 
+                item.get("SharedContent", None),
+                item.get("Link", None),
+                item.get("Method", None)
+            ))
+
+        out = pd.DataFrame(datapoints, columns=["Date", "Shared Content", "Url", "Method"]) # pyright: ignore
+    except Exception as e:
+        logger.error("Could not extract: %s", e)
+
+    return out
+
+
+
+def share_history_to_df(file: str, validation) -> pd.DataFrame:
+
+    out = pd.DataFrame()
+
+    if file == "/file-input/user_data_tiktok.json":
+        out = share_history_to_df_json(file)
+    else:
+        if validation.current_ddp_category != None:
+            if validation.current_ddp_category.id == "json_en":
+                out = share_history_to_df_json(file)
+
+            if validation.current_ddp_category.id == "txt_en":
+                out = share_history_to_df_txt(file)
+
+    return out
+
+
+###########################################
+# likes
+
+def like_list_to_df_txt(tiktok_zip: str):
+
+    out = pd.DataFrame()
+
+    try:
+        b = eh.extract_file_from_zip(tiktok_zip, "Like List.txt")
+        b = io.TextIOWrapper(b, encoding='utf-8')
+        text = b.read()
+
+        pattern = re.compile(r"^Date: (.*?)\nLink: (.*?)$", re.MULTILINE)
+        matches = re.findall(pattern, text)
+        out = pd.DataFrame(matches, columns=["Time and date", "Link"]) # pyright: ignore
+
+    except Exception as e:
+        logger.error(e)
+
+    return out
+
+
+def like_list_to_df_json(tiktok_zip: str) -> pd.DataFrame:
+
+    d = read_tiktok_file(tiktok_zip)
+    datapoints = []
+    out = pd.DataFrame()
+
+    try: 
+        history = d["Your Activity"]["Like List"]["ItemFavoriteList"] # pyright: ignore
+        for item in history:
+            datapoints.append((
+                item.get("date", ""),
+                item.get("link", ""),
+            ))
+
+        out = pd.DataFrame(datapoints, columns=["Date", "Url"]) # pyright: ignore
+    except Exception as e:
+        logger.error("Could not extract: %s", e)
+
+    return out
+
+
+def like_list_to_df(file: str, validation) -> pd.DataFrame:
+
+    out = pd.DataFrame()
+
+    if file == "/file-input/user_data_tiktok.json":
+        out = like_list_to_df_json(file)
+    else:
+        if validation.current_ddp_category != None:
+            if validation.current_ddp_category.id == "json_en":
+                out = like_list_to_df_json(file)
+
+            if validation.current_ddp_category.id == "txt_en":
+                out = like_list_to_df_txt(file)
+
+    return out
+
+
+####################################################
+
+def extraction(tiktok_zip: str, validation) -> Tuple[list[d3i_props.PropsUIPromptConsentFormTableViz], bool]:
+    browsing_history = browsing_history_to_df(tiktok_zip, validation)
+    is_browsing_history_empty = browsing_history.empty
+
     tables = [
         d3i_props.PropsUIPromptConsentFormTableViz(
             id="tiktok_video_browsing_history",
-            data_frame=browsing_history_to_df(tiktok_zip, validation),
+            data_frame=browsing_history,
             title=props.Translatable({
                 "en": "Watch history", 
                 "nl": "Kijkgeschiedenis"
@@ -164,10 +292,36 @@ def extraction(tiktok_zip: str, validation) -> list[d3i_props.PropsUIPromptConse
             }),
             visualizations=[]
         ),
+        d3i_props.PropsUIPromptConsentFormTableViz(
+            id="tiktok_share_history",
+            data_frame=share_history_to_df(tiktok_zip, validation),
+            title=props.Translatable({
+                "en": "Share history", 
+                "nl": "Deelgeschiedenis"
+            }),
+            description=props.Translatable({
+                "en": "The table below indicates exactly which TikTok videos you have shared and when that was.",
+                "nl": "De tabel hieronder geeft aan welke TikTok video's je precies hebt gedeeld en wanneer dat was."
+            }),
+            visualizations=[]
+        ),
+        d3i_props.PropsUIPromptConsentFormTableViz(
+            id="tiktok_like_list",
+            data_frame=like_list_to_df(tiktok_zip, validation),
+            title=props.Translatable({
+                "en": "Like history", 
+                "nl": "Likegeschiedenis"
+            }),
+            description=props.Translatable({
+                "en": "The table below indicates exactly which TikTok videos you have liked and when that was.",
+                "nl": "De tabel hieronder geeft aan welke TikTok video's je precies hebt geliked en wanneer dat was.",
+            }),
+            visualizations=[]
+        ),
     ]
 
     tables_to_render = [table for table in tables if table.data_frame is not None and not table.data_frame.empty]
-    return tables_to_render
+    return (tables_to_render, is_browsing_history_empty)
 
 
 class TikTokFlow(FlowBuilder):

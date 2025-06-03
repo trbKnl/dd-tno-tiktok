@@ -42,6 +42,11 @@ class FlowBuilder:
                 "nl": "Probeer opnieuw"
             }),
 
+            "retry_header_no_browse": props.Translatable({
+                "en": "Contact the researcher", 
+                "nl": "Neem contact op met de onderzoeker"
+            }),
+
             "review_data_description": props.Translatable({
                 "en": f"Below you will find a curated selection of {self.platform_name} data.",
                 "nl": f"Hieronder vindt u een zorgvuldig samengestelde selectie van {self.platform_name} gegevens.",
@@ -63,7 +68,18 @@ class FlowBuilder:
                 # Happy flow: Valid file
                 if validation.get_status_code_id() == 0:
                     logger.info(f"Payload for {self.platform_name}")
-                    self.table_list = self.extract_data(file_result.value, validation)
+                    self.table_list, is_browsing_history_empty = self.extract_data(file_result.value, validation)
+
+                    if is_browsing_history_empty:
+                        logger.info(f"Browsing history empty")
+                        retry_prompt = generate_review_data_prompt_no_browse()
+                        retry_result = yield ph.render_page(self.UI_TEXT["retry_header_no_browse"], retry_prompt)
+                        if retry_result.__type__ == "PayloadTrue":
+                            continue
+                        else:
+                            logger.info("Skipped during retry flow")
+                            break
+
                     if isinstance(self.table_list, Generator):
                         self.table_list = yield from self.table_list
 
@@ -124,3 +140,19 @@ class FlowBuilder:
         )
 
 
+
+def generate_review_data_prompt_no_browse() -> props.PropsUIPromptConfirm:
+    text = props.Translatable({
+        "en": "We can't find any Browse history. Please contact the researcher by clicking on the icon to the left.", 
+        "nl": "We hebben geen kijkgeschiedenis gevonden. Neem alstublieft contact op met de onderzoeker door op het 'i' icoon rechtsonder in de hoek te klikken."
+    })
+
+    ok = props.Translatable({
+        "en": "Try again",
+        "nl": "Probeer opnieuw"
+    })
+    cancel = props.Translatable({
+        "en": "",
+        "nl": ""
+    })
+    return props.PropsUIPromptConfirm(text, ok, cancel)
