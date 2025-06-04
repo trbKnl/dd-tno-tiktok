@@ -135,7 +135,7 @@ def browsing_history_to_df(file: str, validation) -> pd.DataFrame:
 
             if validation.current_ddp_category.id == "txt_en":
                 try:
-                    b = eh.extract_file_from_zip(file, "Browsing History.txt")
+                    b = eh.extract_file_from_zip(file, "Watch History.txt")
                     b = io.TextIOWrapper(b, encoding='utf-8')
                     text = b.read()
 
