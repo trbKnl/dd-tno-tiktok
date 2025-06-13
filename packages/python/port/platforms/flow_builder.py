@@ -34,7 +34,7 @@ class FlowBuilder:
             
             "review_data_header": props.Translatable({
                 "en": f"Your {self.platform_name} data", 
-                "nl": f"Uw {self.platform_name} gegevens"
+                "nl": f"Jouw {self.platform_name} gegevens"
             }),
             
             "retry_header": props.Translatable({
@@ -49,7 +49,7 @@ class FlowBuilder:
 
             "review_data_description": props.Translatable({
                 "en": f"Below you will find a curated selection of {self.platform_name} data.",
-                "nl": f"Hieronder vindt u een zorgvuldig samengestelde selectie van {self.platform_name} gegevens.",
+                "nl": f"Hieronder zie je een selectie van je {self.platform_name}-gegevens. We kijken alleen naar hoe lang de video’s zijn, niet naar de inhoud. De links naar de video’s worden later verwijderd.",
             })
         }
         
